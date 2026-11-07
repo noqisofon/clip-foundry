@@ -1,0 +1,14 @@
+{
+  "name": "clip-foundry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "クリップ工場オートメーション — ルールを書いて工場を自動運転する風刺ゲーム",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test": "node scripts/verify.js"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

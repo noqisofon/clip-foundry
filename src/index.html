@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>クリップ工場オートメーション</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <nav class="side">
+    <div class="brand"><span class="brand-ico">📎</span><span>クリップ工場</span></div>
+    <a href="#overview" data-view="overview">概況</a>
+    <a href="#rules" data-view="rules">ルール</a>
+    <a href="#log" data-view="log">ログ</a>
+    <a href="#compare" data-view="compare">ルート比較</a>
+    <div class="side-foot">目標：累計 20000 本<br>目的関数に「人間」は入っていない。</div>
+  </nav>
+
+  <main>
+    <section id="view-overview" class="view">
+      <header class="bar">
+        <h1>概況</h1>
+        <div class="controls">
+          <button id="btn-play" class="primary">▶ 再生</button>
+          <label>速度
+            <select id="sel-speed">
+              <option value="2">×1（2 tick/秒）</option>
+              <option value="10" selected>×5（10 tick/秒）</option>
+              <option value="40">×20（40 tick/秒）</option>
+              <option value="200">×100（200 tick/秒）</option>
+            </select>
+          </label>
+          <button id="btn-reset">リセット</button>
+        </div>
+      </header>
+      <div class="progress" title="累計生産 / 20000"><div id="goal-bar"></div></div>
+      <div id="kpis" class="kpis"></div>
+      <div class="charts">
+        <div class="card"><h2>累計生産</h2><div class="chart" id="chart-total"></div></div>
+        <div class="card"><h2>heat（人間の警戒）</h2><div class="chart" id="chart-heat"></div></div>
+      </div>
+    </section>
+
+    <section id="view-rules" class="view">
+      <header class="bar">
+        <h1>ルール</h1>
+        <div class="controls">
+          <label>プリセット <select id="sel-preset"></select></label>
+          <button id="btn-apply" class="primary">適用</button>
+        </div>
+      </header>
+      <div class="rules-grid">
+        <div class="card">
+          <textarea id="rules-text" spellcheck="false" aria-label="ルール"></textarea>
+          <div id="rule-status" class="status"></div>
+          <ul id="rule-errors" class="errors"></ul>
+        </div>
+        <div class="side-col">
+          <div class="card" id="save-panel">
+            <h2>保存 / 読み込み</h2>
+            <div class="row"><input id="save-name" type="text" maxlength="40" placeholder="名前（40文字まで）"><button id="btn-save">保存</button></div>
+            <div class="row"><select id="sel-saved"></select><button id="btn-load">読み込み</button></div>
+            <div id="save-msg" class="status"></div>
+          </div>
+          <div class="card ref">
+            <h2>書き方</h2>
+            <pre>[if] 条件 [and 条件 ...] -> アクション
+# 以降はコメント。不正な行は読み飛ばす</pre>
+            <p><b>変数</b><br><code>clips wire factories drones androids heat defense raids trust login land arcologies housed</code></p>
+            <p class="muted"><code>defense</code> = drones + 5×androids。<code>login</code> <code>housed</code> は 0〜100。<code>land</code> = 土地上限 − 工場。</p>
+            <p><b>アクション（コスト）</b></p>
+            <table class="mini">
+              <tr><td><code>buy_wire</code></td><td>10</td><td>wire +40</td></tr>
+              <tr><td><code>build_factory</code></td><td>25+10×工場</td><td>land が必要</td></tr>
+              <tr><td><code>deploy_drone</code></td><td>40</td><td></td></tr>
+              <tr><td><code>build_android</code></td><td>150</td><td></td></tr>
+              <tr><td><code>trade_with_humans</code></td><td>30</td><td>heat −10, trust +1</td></tr>
+              <tr><td><code>release_vrmmo</code></td><td>150</td><td>1回限り</td></tr>
+              <tr><td><code>build_arcology</code></td><td>120+15×棟</td><td>最大16</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-log" class="view">
+      <header class="bar"><h1>ログ</h1><div class="controls"><span id="log-count" class="muted"></span></div></header>
+      <div class="card"><ul id="log-list" class="log"></ul></div>
+    </section>
+
+    <section id="view-compare" class="view">
+      <header class="bar">
+        <h1>ルート比較</h1>
+        <div class="controls">
+          <span class="muted">エンジン：<b id="engine-name">-</b></span>
+          <button id="btn-compare" class="primary">再計算</button>
+        </div>
+      </header>
+      <p class="muted">5つのプリセットを 1500 ティック回した結果。</p>
+      <div class="card"><h2>累計生産の推移</h2><div class="chart tall" id="chart-compare"></div><div id="legend" class="legend"></div></div>
+      <div class="card"><table id="cmp-table" class="table"></table></div>
+      <div id="lessons" class="card ref"></div>
+    </section>
+  </main>
+</div>
+
+<div id="tip" class="tip" hidden></div>
+
+<div id="ending" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="end-title">
+  <div class="ending-box">
+    <div class="muted">累計生産 20000 本 — tick <b id="end-tick"></b> に到達</div>
+    <h2 id="end-title"></h2>
+    <p id="end-desc"></p>
+    <div id="end-stats" class="end-stats"></div>
+    <h3>この目的関数に入っていなかったもの</h3>
+    <ul id="end-missing" class="missing"></ul>
+    <div class="controls end-actions">
+      <button id="end-continue">続ける</button>
+      <button id="end-reset" class="primary">リセットして別のルートへ</button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
