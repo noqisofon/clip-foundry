@@ -8,9 +8,20 @@ use tauri::Manager;
 const MAX_TEXT: usize = 100 * 1024;
 const MAX_NAME: usize = 40;
 
+/// Windows の予約デバイス名（拡張子付きでも予約扱い）
+fn is_reserved(name: &str) -> bool {
+    let stem = name.trim().to_ascii_uppercase();
+    let stem = stem.split('.').next().unwrap_or("").trim_end();
+    matches!(stem, "CON" | "PRN" | "AUX" | "NUL")
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && matches!(stem.as_bytes()[3], b'1'..=b'9'))
+}
+
 fn valid_name(name: &str) -> bool {
     let n = name.chars().count();
     n > 0
+        && !is_reserved(name)
         && n <= MAX_NAME
         && !name.trim().is_empty()
         && name
@@ -74,12 +85,36 @@ fn load_rules(app: tauri::AppHandle, name: String) -> Result<String, String> {
     fs::read_to_string(path).map_err(|e| e.to_string())
 }
 
+// 重い計算でメインスレッド（UI）を止めないよう、ブロッキング用スレッドで実行する
 #[tauri::command]
-fn simulate_batch(texts: Vec<String>, ticks: u64, every: u64) -> Result<Vec<SimResult>, String> {
+async fn simulate_batch(
+    texts: Vec<String>,
+    ticks: u64,
+    every: u64,
+) -> Result<Vec<SimResult>, String> {
     if texts.len() > 32 || ticks > 100_000 || texts.iter().any(|t| t.len() > MAX_TEXT) {
         return Err("リクエストが大きすぎます".into());
     }
-    Ok(texts.iter().map(|t| sim::simulate(t, ticks, every)).collect())
+    tauri::async_runtime::spawn_blocking(move || {
+        texts.iter().map(|t| sim::simulate(t, ticks, every)).collect()
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::valid_name;
+
+    #[test]
+    fn names() {
+        for ok in ["抑止", "取引＋収容", "a b-c_d・e", "console", "COM10", "COM0"] {
+            assert!(valid_name(ok), "{}", ok);
+        }
+        for bad in ["", "  ", "..", "a/b", "a.b", "CON", "con", "NUL ", "com1", "LPT9", &"あ".repeat(41)] {
+            assert!(!valid_name(bad), "{}", bad);
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

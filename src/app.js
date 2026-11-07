@@ -240,7 +240,11 @@
   }
 
   // ---- 比較画面 -----------------------------------------------------
-  let compareDone = false;
+  let compareDone = false, compareModel = null;
+  function drawCompare() {
+    if (!compareModel) return;
+    drawChart($("chart-compare"), compareModel, { hline: CLIP.GOAL });
+  }
   async function runCompare() {
     const texts = CLIP.PRESETS.map((p) => p.text), TICKS = 1500, EVERY = 10;
     let res, engine;
@@ -255,7 +259,8 @@
       name: CLIP.PRESETS[i].name, color: COLORS[i],
       data: r.pts.map((y, j) => [j * EVERY, y]),
     }));
-    drawChart($("chart-compare"), series, { hline: CLIP.GOAL });
+    compareModel = series;
+    drawCompare();
     const lg = $("legend"); lg.replaceChildren();
     series.forEach((s) => {
       const sp = document.createElement("span"), sw = document.createElement("span");
@@ -318,7 +323,7 @@
   $("end-continue").addEventListener("click", () => { $("ending").hidden = true; });
   $("end-reset").addEventListener("click", () => { $("ending").hidden = true; reset(); location.hash = "#rules"; });
   window.addEventListener("hashchange", route);
-  window.addEventListener("resize", () => { render(); if (compareDone && currentView() === "compare") runCompare(); });
+  window.addEventListener("resize", () => { render(); if (currentView() === "compare") drawCompare(); });
   reset();
   route();
 })();
